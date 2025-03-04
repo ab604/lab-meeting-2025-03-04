@@ -37,7 +37,7 @@ title-slide-attributes:
 
 -   At slow velocities in a channel, fluid particles form layers, called laminar flow
 -   The particles in each layer travel at different velocities and don't mix between layers
--   If we define reaction time as time following particle release and observation at a detector, then for a population of particles released together, their reaction times will vary
+-   Defining reaction time as time following particle release and observation at a detector, then for a population of particles released together, their reaction times will vary
 -   If they mixed across the layers, we can consider the population average as representing the reaction time
 
 ##  {#slide4-id data-menu-title="Laminar flow animation"}
@@ -665,7 +665,7 @@ Dean flow refers to a secondary circulation pattern that develops perpendicular 
 
 ## Re-cap {.center}
 
-We want to take advantage of diffusion effects and/or combine with secondary flow effects to obtain the sort of rapid mixing needed for small volume short timescale HDX achieved in microfluidic droplets
+We want to take advantage of [diffusion effects]{.vonrestoff} and/or combine with [secondary flow effects]{.vonrestoff} to obtain the sort of [rapid mixing]{.vonrestoff} needed for small volume short timescale HDX achieved in microfluidic droplets
 
 # Simulate first {.center}
 
@@ -687,15 +687,15 @@ We want to take advantage of diffusion effects and/or combine with secondary flo
 
 ## Conclusion {.center}
 
--   Initial simulations suggest it's possibe to replicate Konermann's observations at smaller scale
+-   Initial simulations suggest it's possible to replicate Konermann's observations at smaller scale
 -   Not sure what is a good enough CV
 
 ## Next steps
 
--   Convince ourselves that we can acheive efficient mixing without droplets
+-   Convince ourselves that we can achieve efficient mixing without droplets
 -   What about quench and digest?
 -   Build devices and use them to replicate the the droplets experiments
--   Try using the device direcetly interfaced with mass spectrometer
+-   Try using the device directly interfaced with mass spectrometer
 -   Also do experiments for HDX-NMR
 -   Work towards self-contained device for others to use
 
