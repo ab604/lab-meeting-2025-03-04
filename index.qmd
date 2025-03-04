@@ -1,0 +1,702 @@
+---
+title: "Lab Meeting"
+author: "Alistair Bailey"
+date: last-modified
+date-format: "[Last updated on] YYYY-MM-DD"
+format:
+  revealjs:
+    theme: [assets/styles.scss]
+title-slide-attributes:
+    data-background-image: img/USH0149_LOGO-2021_RGB_White_Punched-AW.png
+    data-background-size: 25%
+    data-background-position: top right
+    data-background-color: "#8D3970"
+---
+
+##  {background-image="img/protein-dag.png" background-size="contain"}
+
+## Various methods for examining structure-dynamics-function at different timescales {.center}
+
+-   HDX-MS
+-   HDX-NMR
+-   Molecular dynamics
+
+## Short timescales are of particular interest for intrinsically disordered proteins and/or ligand binding {.center}
+
+## For short timescales you need methods that can efficiently mix protein with reporter and/or reactants {.center}
+
+## Protein is hard to purify, so we also want a method that minimises protein use {.center}
+
+## We want to create something user friendly {.center}
+
+## Microfluidic devices with droplets provide efficient mixing
+
+![Dietmar Hammerschmid](img/mf-setup.png){fig-align="center"}
+
+## Rapid mixing without droplets
+
+-   At slow velocities in a channel, fluid particles form layers, called laminar flow
+-   The particles in each layer travel at different velocities and don't mix between layers
+-   If we define reaction time as time following particle release and observation at a detector, then for a population of particles released together, their reaction times will vary
+-   If they mixed across the layers, we can consider the population average as representing the reaction time
+
+##  {#slide4-id data-menu-title="Laminar flow animation"}
+
+::: {.content-visible when-format="html"}
+```{=html}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Add Inter font from Google Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <style>
+        /* Base styles */
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Card styles */
+        .card {
+            border-radius: 0.5rem;
+            border: 1px solid #e5e7eb;
+            background-color: white;
+            color: black;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            width: 100%;
+        }
+
+        .card-header {
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+            padding: 0.25rem;
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            line-height: 1;
+            letter-spacing: -0.025em;
+            margin: 0;
+        }
+
+        .card-content {
+            padding: 1.5rem;
+            padding-top: 0;
+        }
+
+        /* Layout utilities */
+        .flex {
+            display: flex;
+        }
+
+        .flex-col {
+            flex-direction: column;
+        }
+
+        .gap-4 {
+            gap: 1rem;
+        }
+
+        .gap-2 {
+            gap: 0.5rem;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        /* Button styles */
+        .button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+
+        .button-primary {
+            background-color: #3b82f6;
+        }
+
+        .button-secondary {
+            background-color: #4b5563;
+        }
+
+        /* Container styles */
+        .simulation-container {
+            position: relative;
+            width: 100%;
+            padding-top: 33%; /* 16:9 Aspect Ratio (9 ÷ 16 = 0.5625 or 56.25%) */
+            border: 1px solid #d1d5db;
+        }
+
+        .simulation-container svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Legend container */
+        .legend-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+        }
+
+        /* List styles */
+        .observations {
+            font-size: 0.875rem;
+        }
+
+        .observations ul {
+            list-style-type: disc;
+            padding-left: 1.25rem;
+            margin-top: 0.5rem;
+        }
+
+        .observations li {
+            margin-bottom: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+<div class="viz-container">
+    <div id="parabolic-diffusion"></div>
+    <script type="text/babel" data-type="module">
+    const { useState, useEffect } = React;
+    const { createRoot } = ReactDOM;
+
+    const Card = ({ children, className }) => (
+        <div className={`card ${className || ''}`}>
+            {children}
+        </div>
+    );
+
+    const CardHeader = ({ children }) => (
+        <div className="card-header">{children}</div>
+    );
+
+    const CardTitle = ({ children }) => (
+        <h3 className="card-title">{children}</h3>
+    );
+
+    const CardContent = ({ children }) => (
+        <div className="card-content">{children}</div>
+    );
+
+    function ParabolicFlow() {
+        const [time, setTime] = useState(0);
+        const [isPlaying, setIsPlaying] = useState(false);
+        const [showDiffusion, setShowDiffusion] = useState(true);
+
+        // Constants
+        const tubeRadius = 225; // Increased by 3x (from 75 to 225)
+        const dt = 0.05;
+        const maxTime = 60;
+        const D = showDiffusion ? 50 : 0;
+        const velocityScale = 20;
+
+        function getColorForPosition(normalizedR) {
+            const intensity = Math.floor((1 - normalizedR) * 255);
+            return `rgb(${intensity}, 0, ${255 - intensity})`;
+        }
+
+        function createInitialParticles() {
+            const particles = [];
+            const numParticles = 800; // Increased particle count for better visualization
+            for (let i = 0; i < numParticles; i++) {
+                const y = tubeRadius * (2 * i / (numParticles - 1) - 1);
+                particles.push({
+                    x: 0,
+                    y,
+                    initialY: y,
+                    path: [{x: 0, y}],
+                    color: getColorForPosition(Math.abs(y)/tubeRadius)
+                });
+            }
+            return particles;
+        }
+
+        const [particles, setParticles] = useState(createInitialParticles);
+
+        useEffect(() => {
+            if (!isPlaying) return;
+
+            const interval = setInterval(() => {
+                if (time >= maxTime) {
+                    setIsPlaying(false);
+                    return;
+                }
+
+                setTime(t => t + dt);
+                setParticles(currentParticles =>
+                    currentParticles.map(p => {
+                        const normalizedR = Math.abs(p.y) / tubeRadius;
+                        const velocity = velocityScale * (1 - normalizedR * normalizedR);
+
+                        let newY = p.y;
+                        if (D > 0) {
+                            const diffusionStep = Math.sqrt(4 * D * dt);
+                            newY += diffusionStep * (Math.random() - 0.5);
+                            if (Math.abs(newY) > tubeRadius) {
+                                newY = newY > 0 ?
+                                    2 * tubeRadius - newY :
+                                    -2 * tubeRadius - newY;
+                            }
+                        }
+
+                        const newX = p.x + velocity * dt;
+
+                        return {
+                            ...p,
+                            x: newX,
+                            y: newY,
+                            color: getColorForPosition(Math.abs(newY)/tubeRadius)
+                        };
+                    })
+                );
+            }, 20);
+
+            return () => clearInterval(interval);
+        }, [isPlaying, time, D]);
+
+        function resetSimulation() {
+            setTime(0);
+            setParticles(createInitialParticles());
+        }
+
+        function calculateMixingMetric() {
+            if (!showDiffusion) return 0;
+            const displacements = particles.map(p => Math.abs(p.y - p.initialY));
+            const avgDisplacement = displacements.reduce((a, b) => a + b, 0) / particles.length;
+            return Math.min(100, (avgDisplacement / tubeRadius) * 100);
+        }
+
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Long-time Mixing Behavior {showDiffusion ? 'with' : 'without'} Diffusion</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex flex-col gap-4">
+                        <div className="flex justify-between items-center">
+                            <div className="flex gap-4">
+                                <button
+                                    className="button button-primary"
+                                    onClick={() => {
+                                        if (!isPlaying && time >= maxTime) {
+                                            resetSimulation();
+                                        }
+                                        setIsPlaying(!isPlaying);
+                                    }}
+                                >
+                                    {isPlaying ? 'Pause' : time >= maxTime ? 'Reset' : 'Play'}
+                                </button>
+                                <button
+                                    className="button button-secondary"
+                                    onClick={() => {
+                                        setShowDiffusion(!showDiffusion);
+                                        resetSimulation();
+                                    }}
+                                >
+                                    Toggle Diffusion
+                                </button>
+                            </div>
+                            <div className="flex gap-4">
+                                <span>Time: {time.toFixed(1)}s</span>
+                                {showDiffusion &&
+                                    <span>Mixing: {calculateMixingMetric().toFixed(1)}%</span>
+                                }
+                            </div>
+                        </div>
+
+                        <div className="simulation-container">
+                            <svg viewBox="0 -300 1600 600">
+                                <line x1="0" y1={-tubeRadius} x2="1600" y2={-tubeRadius}
+                                      stroke="black" strokeWidth="3"/>
+                                <line x1="0" y1={tubeRadius} x2="1600" y2={tubeRadius}
+                                      stroke="black" strokeWidth="3"/>
+
+                                <path d={`M 10,${-tubeRadius} Q 40,0 10,${tubeRadius}`}
+                                      stroke="#666" fill="none" strokeDasharray="4,4"/>
+
+                                {particles.map((p, i) => (
+                                    <circle key={i}
+                                        cx={p.x}
+                                        cy={p.y}
+                                        r="2"
+                                        fill={p.color}
+                                    />
+                                ))}
+                            </svg>
+                        </div>
+
+                        <div className="legend-container">
+                            <span>Velocity Profile: </span>
+                            <div className="flex gap-2">
+                                <span style={{color: 'rgb(255,0,0)'}}>Center (Fast)</span>
+                                <span style={{color: 'rgb(128,0,128)'}}>Middle</span>
+                                <span style={{color: 'rgb(0,0,255)'}}>Wall (Slow)</span>
+                            </div>
+                        </div>
+
+                        {/*<div className="observations">
+                            Key observations with 3x wider pipe:
+                            <ul>
+                                <li>Early times (t &lt; 5s): Initial parabolic dispersion dominates</li>
+                                <li>Intermediate times (5s-15s): Diffusive mixing begins but is slower in wider pipe</li>
+                                <li>Long times (t &gt; 15s): Significant radial mixing takes longer to develop</li>
+                                <li>Complete mixing time scales with the square of the radius: τ > R²/(36D)</li>
+                                <li>With 3x radius: mixing time increases approximately 9x</li>
+                                <li>Without diffusion: Permanent parabolic dispersion pattern regardless of width</li>
+                            </ul>
+                        </div>*/}
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    // Render the component
+    const container = document.getElementById('parabolic-diffusion');
+    const root = createRoot(container);
+    root.render(<ParabolicFlow />);
+    </script>
+</div>
+</body>
+</html>
+```
+:::
+
+##  {#slide5-id data-menu-title="Brownian motion diffusion"}
+
+::: {.content-visible when-format="html"}
+```{=html}
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Add Inter font from Google Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 50%;
+            max-width: 48rem; /* 3xl in Tailwind */
+            margin: 0 auto;
+            padding: 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            background-color: white;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .header {
+            margin-top: 0rem;
+            margin-bottom: 1rem;
+        }
+
+        .title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .content {
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .svg-container {
+            background-color: #f9fafb;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            color: white;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            border: none;
+        }
+
+        .button-primary {
+            background-color: #3b82f6;
+        }
+
+        .button-primary:hover {
+            background-color: #2563eb;
+        }
+
+        .button-secondary {
+            background-color: #6b7280;
+        }
+
+        .button-secondary:hover {
+            background-color: #4b5563;
+        }
+
+        .timer-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            background-color: #111827;
+            padding: 0.75rem;
+            border-radius: 0.25rem;
+            color: white;
+        }
+
+        .timer-text {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .timer-value {
+            color: #2563eb;
+        }
+
+        .max-time {
+            font-size: 0.875rem;
+            color: #4b5563;
+        }
+    </style>
+</head>
+<body>
+<div class="viz-container">
+    <div id="diffusion"></div>
+    <script type="text/babel" data-type="module">
+    const { useState, useEffect } = React;
+    const { createRoot } = ReactDOM;
+
+    const DiffusionVisualisation = () => {
+    const [time, setTime] = useState(0);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const tubeRadius = 140;
+    const D = 50;
+    const dt = 0.05;
+    const maxTime = 12;
+
+    const svgSize = tubeRadius * 2 + 40;
+
+    const initialParticles = [
+        { x: 0, y: 0, path: [{x: 0, y: 0}], color: '#212B79', label: 'Center' },
+        { x: 0, y: tubeRadius * 0.5, path: [{x: 0, y: tubeRadius * 0.5}], color: '#FCBC00', label: 'Top' },
+        { x: 0, y: -tubeRadius * 0.5, path: [{x: 0, y: -tubeRadius * 0.5}], color: '#202272', label: 'Bottom' },
+        { x: -tubeRadius * 0.5, y: 0, path: [{x: -tubeRadius * 0.5, y: 0}], color: '#D5007F', label: 'Left' },
+        { x: tubeRadius * 0.5, y: 0, path: [{x: tubeRadius * 0.5, y: 0}], color: '#EF7D00', label: 'Right' }
+    ];
+
+    const [particles, setParticles] = useState(initialParticles);
+
+    useEffect(() => {
+        if (!isPlaying) return;
+
+        const interval = setInterval(() => {
+            if (time >= maxTime) {
+                setIsPlaying(false);
+                return;
+            }
+
+            setTime(t => t + dt);
+            setParticles(currentParticles =>
+                currentParticles.map(p => {
+                    const diffusionStep = Math.sqrt(4 * D * dt) * 2;
+                    let newX = p.x + diffusionStep * (Math.random() - 0.5);
+                    let newY = p.y + diffusionStep * (Math.random() - 0.5);
+
+                    const r = Math.sqrt(newX * newX + newY * newY);
+                    if (r > tubeRadius) {
+                        const scale = tubeRadius / r;
+                        newX *= scale;
+                        newY *= scale;
+                    }
+
+                    return {
+                        ...p,
+                        x: newX,
+                        y: newY,
+                        path: [...p.path, {x: newX, y: newY}]
+                    };
+                })
+            );
+        }, dt * 1000);
+
+        return () => clearInterval(interval);
+    }, [isPlaying, time]);
+
+    const handleReset = () => {
+        setTime(0);
+        setIsPlaying(false);
+        setParticles(initialParticles);
+    };
+
+    return (
+            <div className="container">
+                {/*<div className="header">
+                    <h2 className="title">Particle Diffusion Simulation</h2>
+                </div>*/}
+                <div className="content">
+                    <svg
+                        width="100%"
+                        height="100%"
+                        className="svg-container"
+                        viewBox={`0 0 ${svgSize} ${svgSize}`}
+                        preserveAspectRatio="xMidYMid meet"
+                    >
+                    <circle
+                        cx={svgSize/2}
+                        cy={svgSize/2}
+                        r={tubeRadius}
+                        fill="none"
+                        stroke="black"
+                        strokeWidth="2"
+                    />
+                    {/* Radial guidelines */}
+                        {Array.from({length: 5}).map((_, i) => (
+                            <circle key={i} cx={svgSize/2} cy={svgSize/2}
+                                    r={tubeRadius * (i+1)/5}
+                                    fill="none"
+                                    stroke="black"
+                                    strokeDasharray="2,2"/>
+                        ))}
+                    {particles.map((p, i) => (
+                        <g key={i}>
+                            {p.path.map((pos, j) => (
+                                <circle
+                                    key={j}
+                                    cx={pos.x + svgSize/2}
+                                    cy={pos.y + svgSize/2}
+                                    r={2}
+                                    fill={p.color}
+                                    opacity={j === p.path.length - 1 ? 1 : 0.2}
+                                />
+                            ))}
+                        </g>
+                    ))}
+                    </svg>
+                    <div className="button-container">
+                        <button
+                            className="button button-primary"
+                            onClick={() => setIsPlaying(!isPlaying)}
+                        >
+                            {isPlaying ? 'Pause' : 'Play'}
+                        </button>
+                        <button
+                            className="button button-secondary"
+                            onClick={handleReset}
+                        >
+                            Reset
+                        </button>
+                    </div>
+                    <div className="timer-container">
+                        <div className="timer-text">
+                            Simulation Time: <span className="timer-value">{time.toFixed(2)}s</span>
+                        </div>
+                        <div className="max-time">
+                            Max Time: {maxTime}s
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // Render the component
+    const container = document.getElementById('diffusion');
+    const root = createRoot(container);
+    root.render(<DiffusionVisualisation />);
+    </script>
+</div>
+</body>
+</html>
+```
+:::
+
+## Lars Konermann 1999 {.center}
+
+-   Modelled combined convection and diffusion effects
+-   For short reaction times or large tube diameters diffusion is not effective in mixing reactants
+-   As diffusion increases with longer reaction times or smaller tube diameters mixing is efficient
+
+## Lars Konermann 1999 {.center}
+
+-   τ is the nominal residence time τ = (l/v̄), where l is length and v̄ is the average velocity
+-   Using a cylindrical pipe with a radius R of 75𝜇m for particles with diffusion coefficent D, he identified a criterion τ \> R²/(36D) above which the parabolic flow has mixed sufficiently
+
+##  {#slide14-id data-menu-title="Konermann Figure 4" background-image="img/konermann-1999-fig-04.png" background-size="contain"}
+
+## Dean flow aka Secondary flow {.white-blue}
+
+Dean flow refers to a secondary circulation pattern that develops perpendicular to the primary flow direction when fluid flows through a curved channel
+
+![By Rudolf Hellmuth - Own work, CC BY-SA 4.0, https://commons.wikimedia.org/w/index.php?curid=60673881](img/DeanVortices.png){fig-align="right"}
+
+## Re-cap {.center}
+
+We want to take advantage of diffusion effects and/or combine with secondary flow effects to obtain the sort of rapid mixing needed for small volume short timescale HDX achieved in microfluidic droplets
+
+# Simulate first {.center}
+
+## Rectangular Channel {.white-blue}
+
+![Rectangular Channel 140um x 70um x 15 mm](img/rect-channel.png){fig-align="center"}
+
+#  {#slide19-id data-menu-title="Rectangular Channel Distributions" background-image="img/rectangular-channel-15mm-distributions.png" background-size="contain"}
+
+## Serpentine Channel {.white-blue}
+
+![Serpentine Channel 140um x 70um x 15mm](img/four-bends.png){fig-align="center"}
+
+## Serpentine Channel
+
+![](img/paste-1.png)
+
+#  {#slide22-id data-menu-title="Serpentine Channel Distributions" background-image="img/serpentine-channel-15mm-distributions.png" background-size="contain"}
+
+## Conclusion {.center}
+
+-   Initial simulations suggest it's possibe to replicate Konermann's observations at smaller scale
+-   Not sure what is a good enough CV
+
+## Next steps
+
+-   Convince ourselves that we can acheive efficient mixing without droplets
+-   What about quench and digest?
+-   Build devices and use them to replicate the the droplets experiments
+-   Try using the device direcetly interfaced with mass spectrometer
+-   Also do experiments for HDX-NMR
+-   Work towards self-contained device for others to use
+
+# Extras {.center}

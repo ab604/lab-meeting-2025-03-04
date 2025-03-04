@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Add Inter font from Google Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 75%;
+            max-width: 48rem; /* 3xl in Tailwind */
+            margin: 0 auto;
+            padding: 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            background-color: white;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .header {
+            margin-top: 0rem;
+            margin-bottom: 1rem;
+        }
+
+        .title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .content {
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .svg-container {
+            background-color: #f9fafb;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            color: white;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            border: none;
+        }
+
+        .button-primary {
+            background-color: #3b82f6;
+        }
+
+        .button-primary:hover {
+            background-color: #2563eb;
+        }
+
+        .button-secondary {
+            background-color: #6b7280;
+        }
+
+        .button-secondary:hover {
+            background-color: #4b5563;
+        }
+
+        .timer-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            background-color: #111827;
+            padding: 0.75rem;
+            border-radius: 0.25rem;
+            color: white;
+        }
+
+        .timer-text {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .timer-value {
+            color: #2563eb;
+        }
+
+        .max-time {
+            font-size: 0.875rem;
+            color: #4b5563;
+        }
+    </style>
+</head>
+<body>   
+<div class="viz-container">
+    <div id="diffusion"></div>
+    <script type="text/babel" data-type="module">
+    const { useState, useEffect } = React;
+    const { createRoot } = ReactDOM;
+
+    const DiffusionVisualisation = () => {
+    const [time, setTime] = useState(0);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const tubeRadius = 140;
+    const D = 50;
+    const dt = 0.05;
+    const maxTime = 12;
+    
+    const svgSize = tubeRadius * 2 + 40;
+    
+    const initialParticles = [
+        { x: 0, y: 0, path: [{x: 0, y: 0}], color: '#212B79', label: 'Center' }, 
+        { x: 0, y: tubeRadius * 0.5, path: [{x: 0, y: tubeRadius * 0.5}], color: '#FCBC00', label: 'Top' },
+        { x: 0, y: -tubeRadius * 0.5, path: [{x: 0, y: -tubeRadius * 0.5}], color: '#202272', label: 'Bottom' },
+        { x: -tubeRadius * 0.5, y: 0, path: [{x: -tubeRadius * 0.5, y: 0}], color: '#D5007F', label: 'Left' },
+        { x: tubeRadius * 0.5, y: 0, path: [{x: tubeRadius * 0.5, y: 0}], color: '#EF7D00', label: 'Right' }
+    ];
+    
+    const [particles, setParticles] = useState(initialParticles);
+    
+    useEffect(() => {
+        if (!isPlaying) return;
+        
+        const interval = setInterval(() => {
+            if (time >= maxTime) {
+                setIsPlaying(false);
+                return;
+            }
+            
+            setTime(t => t + dt);
+            setParticles(currentParticles => 
+                currentParticles.map(p => {
+                    const diffusionStep = Math.sqrt(4 * D * dt) * 2;
+                    let newX = p.x + diffusionStep * (Math.random() - 0.5);
+                    let newY = p.y + diffusionStep * (Math.random() - 0.5);
+                    
+                    const r = Math.sqrt(newX * newX + newY * newY);
+                    if (r > tubeRadius) {
+                        const scale = tubeRadius / r;
+                        newX *= scale;
+                        newY *= scale;
+                    }
+                    
+                    return {
+                        ...p,
+                        x: newX,
+                        y: newY,
+                        path: [...p.path, {x: newX, y: newY}]
+                    };
+                })
+            );
+        }, dt * 1000);
+        
+        return () => clearInterval(interval);
+    }, [isPlaying, time]);
+    
+    const handleReset = () => {
+        setTime(0);
+        setIsPlaying(false);
+        setParticles(initialParticles);
+    };
+
+    return (
+            <div className="container">
+                {/*<div className="header">
+                    <h2 className="title">Particle Diffusion Simulation</h2>
+                </div>*/}
+                <div className="content">
+                    <svg 
+                        width="100%" 
+                        height="100%" 
+                        className="svg-container"
+                        viewBox={`0 0 ${svgSize} ${svgSize}`}
+                        preserveAspectRatio="xMidYMid meet"
+                    >
+                    <circle 
+                        cx={svgSize/2} 
+                        cy={svgSize/2} 
+                        r={tubeRadius} 
+                        fill="none" 
+                        stroke="black" 
+                        strokeWidth="2"
+                    />
+                    {/* Radial guidelines */}
+                        {Array.from({length: 5}).map((_, i) => (
+                            <circle key={i} cx={svgSize/2} cy={svgSize/2} 
+                                    r={tubeRadius * (i+1)/5}
+                                    fill="none" 
+                                    stroke="black" 
+                                    strokeDasharray="2,2"/>
+                        ))}
+                    {particles.map((p, i) => (
+                        <g key={i}>
+                            {p.path.map((pos, j) => (
+                                <circle
+                                    key={j}
+                                    cx={pos.x + svgSize/2}
+                                    cy={pos.y + svgSize/2}
+                                    r={2}
+                                    fill={p.color}
+                                    opacity={j === p.path.length - 1 ? 1 : 0.2}
+                                />
+                            ))}
+                        </g>
+                    ))}
+                    </svg>
+                    <div className="button-container">
+                        <button 
+                            className="button button-primary"
+                            onClick={() => setIsPlaying(!isPlaying)}
+                        >
+                            {isPlaying ? 'Pause' : 'Play'}
+                        </button>
+                        <button 
+                            className="button button-secondary"
+                            onClick={handleReset}
+                        >
+                            Reset
+                        </button>
+                    </div>
+                    <div className="timer-container">
+                        <div className="timer-text">
+                            Simulation Time: <span className="timer-value">{time.toFixed(2)}s</span>
+                        </div>
+                        <div className="max-time">
+                            Max Time: {maxTime}s
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // Render the component
+    const container = document.getElementById('diffusion');
+    const root = createRoot(container);
+    root.render(<DiffusionVisualisation />);
+    </script>
+</div>
+</body>
+</html>
